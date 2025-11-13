@@ -92,3 +92,63 @@ def get_doubao_token() -> str:
     """获取豆包 TTS Token"""
     return get_tts_config().get('DOUBAO_TOKEN', '')
 
+
+def get_download_config() -> dict:
+    """
+    获取下载配置
+    
+    Returns:
+        下载配置字典
+    """
+    config = get_config()
+    return config.get('DOWNLOAD', {})
+
+
+def get_model_download_config() -> dict:
+    """
+    获取模型下载配置
+    
+    Returns:
+        模型配置字典，格式: {model_name: {url: ..., path: ..., size: ..., description: ...}}
+    """
+    download_config = get_download_config()
+    base_url = download_config.get('BASE_URL', '')
+    models = download_config.get('MODELS', {})
+    
+    # 为每个模型添加完整的URL
+    result = {}
+    for model_name, model_info in models.items():
+        result[model_name] = {
+            'url': f"{base_url}/{model_name}",
+            'path': model_info.get('path', ''),
+            'size': model_info.get('size', ''),
+            'description': model_info.get('description', '')
+        }
+    
+    return result
+
+
+def get_avatar_download_config() -> dict:
+    """
+    获取形象下载配置
+    
+    Returns:
+        形象配置字典，格式: {avatar_name: {url: ..., path: ..., size: ..., description: ...}}
+    """
+    download_config = get_download_config()
+    base_url = download_config.get('BASE_URL', '')
+    avatars = download_config.get('AVATARS', {})
+    
+    # 为每个形象添加完整的URL
+    result = {}
+    for avatar_name, avatar_info in avatars.items():
+        url_suffix = avatar_info.get('url_suffix', f"{avatar_name}.zip")
+        result[avatar_name] = {
+            'url': f"{base_url}/{url_suffix}",
+            'path': avatar_info.get('path', ''),
+            'size': avatar_info.get('size', ''),
+            'description': avatar_info.get('description', '')
+        }
+    
+    return result
+

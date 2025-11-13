@@ -20,6 +20,9 @@ from src.log import logger
 # 导入wav2lip模型
 from src.wav2lip.models import Wav2Lip
 
+pwd_path = os.path.abspath(os.path.dirname(__file__))
+default_model_path = os.path.join(pwd_path, '../models/wav2lip.pth')
+
 device = "cuda" if torch.cuda.is_available() else "cpu"
 logger.info(f'Using {device} for inference.')
 
@@ -321,7 +324,7 @@ def close_session():
 def main():
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument('--model_path', type=str, default='./models/wav2lip.pth', help='wav2lip模型路径')
+    parser.add_argument('--model_path', type=str, default=default_model_path, help='wav2lip模型路径')
     parser.add_argument('--batch_size', type=int, default=32, help='batch size for warmup (推荐16-64)')
     parser.add_argument('--modelres', type=int, default=256, help='model resolution (default 256 for wav2lip)')
     parser.add_argument('--fp16', action='store_true', help='使用FP16半精度推理（更快，显存更小）')

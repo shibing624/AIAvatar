@@ -1,8 +1,35 @@
 LLM:
-  LLM_API_KEY: "sk-8713fa90974545f5abf7464714d3b011"
+  LLM_API_KEY: "sk-xxx"
   LLM_BASE_URL: "https://dashscope.aliyuncs.com/compatible-mode/v1"
 
 TTS:
-  DOUBAO_APPID: "3753195493"
-  DOUBAO_TOKEN: "OcJsLE3uyaPib9cfyiPpHtNGMDm3-nYc"
+  DOUBAO_APPID: "xxx"
+  DOUBAO_TOKEN: "xxx"
 
+DOWNLOAD:
+  BASE_URL: "https://huggingface.co/shibing624/ai-avatar-wav2lip/resolve/main"
+  
+  MODELS:
+    wav2lip.pth:
+      path: "./models/wav2lip.pth"
+      size: "215 MB"
+      description: "Wav2Lip256 唇形同步生成模型"
+  
+  AVATARS:
+    wav2lip_avatar_female_model:
+      url_suffix: "wav2lip_avatar_female_model.zip"
+      path: "./data/wav2lip_avatar_female_model.zip"
+      size: "353 MB"
+      description: "女性数字人形象(含预处理人脸图片)"
+    
+    wav2lip_avatar_glass_man:
+      url_suffix: "wav2lip_avatar_glass_man.zip"
+      path: "./data/wav2lip_avatar_glass_man.zip"
+      size: "88.4 MB"
+      description: "戴眼镜男性数字人形象"
+    
+    wav2lip_avatar_long_hair_girl:
+      url_suffix: "wav2lip_avatar_long_hair_girl.zip"
+      path: "./data/wav2lip_avatar_long_hair_girl.zip"
+      size: "153 MB"
+      description: "长发女性数字人形象"

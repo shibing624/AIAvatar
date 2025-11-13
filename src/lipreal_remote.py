@@ -32,7 +32,7 @@ root_dir = os.path.dirname(pwd_path)
 def load_avatar(avatar_id):
     """加载avatar数据"""
     # avatar_path = f"./data/avatars/{avatar_id}"
-    avatar_path = os.path.join(root_dir, avatar_id)
+    avatar_path = os.path.join(root_dir, 'data', avatar_id)
     full_imgs_path = f"{avatar_path}/full_imgs" 
     face_imgs_path = f"{avatar_path}/face_imgs" 
     coords_path = f"{avatar_path}/coords.pkl"
@@ -329,7 +329,7 @@ class LipReal(BaseReal):
             if video_track and video_track._queue.qsize() >= 5:
                 queue_size = video_track._queue.qsize()
                 sleep_time = 0.04 * queue_size * 0.8
-                logger.debug(f'视频帧队列积压 [{queue_size}帧]，暂停生产 {sleep_time:.3f} 秒以控制延迟')
+                logger.debug(f'pausing production for queue control, queue size: {queue_size}')
                 time.sleep(sleep_time)
 
         logger.info('lipreal thread stop')

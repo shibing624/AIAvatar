@@ -16,12 +16,15 @@ from aiortc.rtcrtpsender import RTCRtpSender
 import argparse
 import asyncio
 import uuid
+import os
 from typing import Dict
 
 from src.webrtc import HumanPlayer
 from src.basereal import BaseReal
 from src.llm import llm_response
 from src.log import logger
+from src.get_file import http_get
+from src.config import get_model_download_config, get_avatar_download_config
 
 app = Flask(__name__)
 nerfreals: Dict[int, BaseReal] = {}  # sessionid:BaseReal
@@ -31,6 +34,65 @@ avatar = None
 
 # webrtc
 pcs = set()
+
+pwd_path = os.path.abspath(os.path.dirname(__file__))
+default_model_path = os.path.join(pwd_path, 'models/wav2lip.pth')
+
+
+def ensure_models_and_avatars():
+    """确保模型和形象文件存在，如果不存在则自动下载"""
+    data_dir = "./data"
+    models_dir = "./models"
+    
+    # 创建必要的目录
+    os.makedirs(data_dir, exist_ok=True)
+    os.makedirs(models_dir, exist_ok=True)
+    
+    logger.info("=== 检查模型和形象文件 ===")
+    
+    # 获取下载配置
+    model_config = get_model_download_config()
+    avatar_config = get_avatar_download_config()
+    
+    # 检查并下载模型文件
+    for model_name, config in model_config.items():
+        if not os.path.exists(config["path"]):
+            logger.info(f"模型文件 {model_name} ({config['size']}) 不存在，开始下载...")
+            logger.info(f"描述: {config['description']}")
+            try:
+                http_get(config["url"], config["path"], extract=False)
+                logger.info(f"✓ 模型文件 {model_name} 下载完成")
+            except Exception as e:
+                logger.error(f"✗ 下载模型文件 {model_name} 失败: {e}")
+                logger.error("请尝试手动下载或检查网络连接")
+                raise
+        else:
+            logger.info(f"✓ 模型文件 {model_name} 已存在")
+    
+    # 检查并下载形象文件
+    for avatar_name, config in avatar_config.items():
+        avatar_dir = f"./data/{avatar_name}"
+        if not os.path.exists(avatar_dir):
+            logger.info(f"形象文件 {avatar_name} ({config['size']}) 不存在，开始下载...")
+            logger.info(f"描述: {config['description']}")
+            try:
+                # 下载并自动解压
+                http_get(config["url"], config["path"], extract=True)
+                logger.info(f"✓ 形象文件 {avatar_name} 下载并解压完成")
+                
+                # 清理zip文件
+                if os.path.exists(config["path"]):
+                    os.remove(config["path"])
+                    logger.info(f"已清理临时文件 {config['path']}")
+                    
+            except Exception as e:
+                logger.error(f"✗ 下载形象文件 {avatar_name} 失败: {e}")
+                logger.error("请尝试手动下载或检查网络连接")
+                raise
+        else:
+            logger.info(f"✓ 形象文件 {avatar_name} 已存在")
+    
+    logger.info("=== 所有文件检查完成 ===")
 
 
 def build_nerfreal(sessionid: int) -> BaseReal:
@@ -264,7 +326,7 @@ if __name__ == '__main__':
     parser.add_argument('--H', type=int, default=450, help="GUI height")
 
     # musetalk opt
-    parser.add_argument('--avatar_id', type=str, default='avator_1', help="define which avatar in data/avatars")
+    parser.add_argument('--avatar_id', type=str, default='wav2lip_avatar_long_hair_girl', help="define which avatar in data directory")
     parser.add_argument('--batch_size', type=int, default=64, help="infer batch")
     parser.add_argument('--customvideo_config', type=str, default='', help="custom action json")
 
@@ -276,8 +338,8 @@ if __name__ == '__main__':
     parser.add_argument('--TTS_SERVER', type=str, default='')  # http://localhost:9000
 
     # GPU服务器配置（用于wav2lip远程推理）
-    parser.add_argument('--gpu_server_url', type=str, default='http://29.245.58.12:8080',
-                        help='Remote GPU server URL for wav2lip, e.g., http://192.168.1.100:5000')
+    parser.add_argument('--gpu_server_url', type=str, default='',
+                        help='Remote GPU server URL for wav2lip, e.g., http://29.245.58.12:8080')
 
     parser.add_argument('--max_session', type=int, default=1)  # multi session count
     parser.add_argument('--port', type=int, default=8010, help="web listen port")
@@ -287,6 +349,11 @@ if __name__ == '__main__':
     if opt.customvideo_config != '':
         with open(opt.customvideo_config, 'r') as file:
             opt.customopt = json.load(file)
+    
+    # 确保模型和形象文件存在
+    logger.info("检查并下载必要的模型和形象文件...")
+    ensure_models_and_avatars()
+    
     if opt.gpu_server_url:
         # 远程GPU模式：只加载avatar，不加载模型
         from src.lipreal_remote import load_avatar
@@ -298,8 +365,8 @@ if __name__ == '__main__':
         # 本地GPU模式
         from src.lipreal import load_model, load_avatar, warm_up
 
-        logger.info("Using local GPU")
-        model = load_model("./models/wav2lip.pth")
+        logger.info(f"Using local GPU, model_path: {default_model_path}, avatar_id: {opt.avatar_id}")
+        model = load_model(default_model_path)
         avatar = load_avatar(opt.avatar_id)
         warm_up(opt.batch_size, model, 256)
 

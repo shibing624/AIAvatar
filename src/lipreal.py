@@ -30,11 +30,10 @@ from queue import Queue
 from threading import Thread, Event
 import torch.multiprocessing as mp
 
-from lipasr import LipASR
-from wav2lip.models import Wav2Lip
-from basereal import BaseReal
-
 from tqdm import tqdm
+from src.basereal import BaseReal
+from src.wav2lip.models import Wav2Lip
+from src.lipasr import LipASR
 from src.log import logger
 
 pwd_path = os.path.dirname(os.path.abspath(__file__))
@@ -68,8 +67,7 @@ def load_model(path):
 
 
 def load_avatar(avatar_id):
-    # avatar_path = f"./data/avatars/{avatar_id}"
-    avatar_path = os.path.join(root_dir, avatar_id)
+    avatar_path = os.path.join(root_dir, 'data', avatar_id)
     full_imgs_path = f"{avatar_path}/full_imgs"
     face_imgs_path = f"{avatar_path}/face_imgs"
     coords_path = f"{avatar_path}/coords.pkl"
@@ -233,17 +231,10 @@ class LipReal(BaseReal):
             t = time.perf_counter()
             self.asr.run_step()
 
-            # if video_track._queue.qsize()>=2*self.opt.batch_size:
-            #     print('sleep qsize=',video_track._queue.qsize())
-            #     time.sleep(0.04*video_track._queue.qsize()*0.8)
             if video_track and video_track._queue.qsize() >= 5:
-                logger.debug('sleep qsize=%d', video_track._queue.qsize())
+                logger.debug(f'pausing production for queue control, queue size: {video_track._queue.qsize()}')
                 time.sleep(0.04 * video_track._queue.qsize() * 0.8)
 
-            # delay = _starttime+_totalframe*0.04-time.perf_counter() #40ms
-            # if delay > 0:
-            #     time.sleep(delay)
-        # self.render_event.clear() #end infer process render
         logger.info('lipreal thread stop')
 
         infer_quit_event.set()

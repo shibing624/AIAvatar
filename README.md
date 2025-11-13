@@ -42,14 +42,66 @@ linux cuda环境搭建可以参考这篇文章 <https://zhuanlan.zhihu.com/p/674
 
 
 ## 2. Quick Start
-- 下载模型  
-夸克云盘<https://pan.quark.cn/s/83a750323ef0>    
-GoogleDriver <https://drive.google.com/drive/folders/1FOC_MD6wdogyyX_7V1d4NDIO7P9NlSAJ?usp=sharing>  
-将wav2lip256.pth拷到本项目的models下, 重命名为wav2lip.pth;  
-将wav2lip256_avatar1.tar.gz解压后整个文件夹拷到本项目的data/avatars下
-- 运行  
-python app.py --transport webrtc --model wav2lip --avatar_id wav2lip256_avatar1  
-<font color=red>服务端需要开放端口 tcp:8010; udp:1-65536 </font>  
+
+### 2.1 自动下载模型和形象（推荐）
+本项目已集成自动下载功能，首次运行时会自动从 HuggingFace 下载必要的模型和形象文件：
+
+- **模型文件**：wav2lip.pth (215 MB) - Wav2Lip256 唇形同步生成模型
+- **形象文件**：
+  - wav2lip_avatar_female_model (353 MB) - 女性数字人形象 
+  - wav2lip_avatar_glass_man (88.4 MB) - 戴眼镜男性数字人形象
+  - wav2lip_avatar_long_hair_girl (153 MB) - 长发女性数字人形象
+
+只需直接运行项目，系统会自动检查并下载缺失的文件到对应目录。
+
+**配置说明**：下载配置位于 `config.yml` 的 `DOWNLOAD` 部分，可根据需要修改下载源或文件路径。
+
+### 2.2 手动下载模型（备选方案）
+如果自动下载遇到网络问题，也可以手动下载：
+- 夸克云盘<https://pan.quark.cn/s/83a750323ef0>    
+- GoogleDriver <https://drive.google.com/drive/folders/1FOC_MD6wdogyyX_7V1d4NDIO7P9NlSAJ?usp=sharing>  
+- HuggingFace <https://huggingface.co/shibing624/ai-avatar-wav2lip>
+
+将wav2lip.pth拷到本项目的models下;  
+将形象文件解压后整个文件夹拷到本项目的data目录下
+
+### 2.3 运行
+
+#### 方式一：使用启动脚本（推荐）
+```bash
+# 使用默认女性形象，端口8010
+./run.sh
+
+# 使用戴眼镜男性形象
+./run.sh glass_man
+
+# 使用长发女性形象，自定义端口
+./run.sh long_hair_girl 8080
+```
+
+#### 方式二：直接运行
+```bash
+# 使用默认女性形象
+python main.py
+
+# 使用指定形象
+python main.py --avatar_id wav2lip_avatar_female_model
+python main.py --avatar_id wav2lip_avatar_glass_man  
+python main.py --avatar_id wav2lip_avatar_long_hair_girl
+
+# 自定义端口
+python main.py --port 8080
+```
+
+**访问方式：**
+- WebRTC前端: http://127.0.0.1:8010/index.html
+- 服务端需要开放端口 tcp:8010; udp:1-65536
+
+**首次运行说明：**
+- 系统会自动检查并下载缺失的模型和形象文件
+- 总下载大小约850MB，请确保网络稳定
+- 下载完成后会自动启动服务
+
 客户端可以选用以下两种方式:  
 (1)用浏览器打开http://serverip:8010/webrtcapi.html , 先点‘start',播放数字人视频；然后在文本框输入任意文字，提交。数字人播报该段文字  
 (2)用客户端方式, 下载地址<https://pan.quark.cn/s/d7192d8ac19b>   
