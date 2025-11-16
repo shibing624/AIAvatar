@@ -1,4 +1,3 @@
- # [English](./README-EN.md) | 中文版  
  <p align="center">
  <img src="./assets/LiveTalking-logo.jpg" align="middle" width = "600"/>
 <p align="center">
@@ -16,10 +15,10 @@
 [wav2lip效果](https://www.bilibili.com/video/BV1scwBeyELA/)
 
 ## Features
-1. 支持多种数字人模型: ernerf、musetalk、wav2lip、Ultralight-Digital-Human
+1. 支持数字人模型wav2lip
 2. 支持声音克隆
 3. 支持数字人说话被打断
-4. 支持webrtc、虚拟摄像头输出
+4. 支持webrtc输出
 5. 支持动作编排：不说话时播放自定义视频
 6. 支持多并发
 
@@ -30,8 +29,8 @@ Tested on Ubuntu 24.04, Python3.10, Pytorch 2.5.0 and CUDA 12.4
 ### 1.1 Install dependency
 
 ```bash
-conda create -n nerfstream python=3.10
-conda activate nerfstream
+conda create -n avatar python=3.10
+conda activate avatar
 #如果cuda版本不为12.4(运行nvidia-smi确认版本)，根据<https://pytorch.org/get-started/previous-versions/>安装对应版本的pytorch 
 conda install pytorch==2.5.0 torchvision==0.20.0 torchaudio==2.5.0 pytorch-cuda=12.4 -c pytorch -c nvidia
 pip install -r requirements.txt
@@ -58,8 +57,6 @@ linux cuda环境搭建可以参考这篇文章 <https://zhuanlan.zhihu.com/p/674
 
 ### 2.2 手动下载模型（备选方案）
 如果自动下载遇到网络问题，也可以手动下载：
-- 夸克云盘<https://pan.quark.cn/s/83a750323ef0>    
-- GoogleDriver <https://drive.google.com/drive/folders/1FOC_MD6wdogyyX_7V1d4NDIO7P9NlSAJ?usp=sharing>  
 - HuggingFace <https://huggingface.co/shibing624/ai-avatar-wav2lip>
 
 将wav2lip.pth拷到本项目的models下;  
@@ -102,38 +99,16 @@ python main.py --port 8080
 - 总下载大小约850MB，请确保网络稳定
 - 下载完成后会自动启动服务
 
-客户端可以选用以下两种方式:  
-(1)用浏览器打开http://serverip:8010/webrtcapi.html , 先点‘start',播放数字人视频；然后在文本框输入任意文字，提交。数字人播报该段文字  
-(2)用客户端方式, 下载地址<https://pan.quark.cn/s/d7192d8ac19b>   
+用浏览器打开http://serverip:8010/index.html , 先点‘开始连接',播放数字人视频；然后在文本框输入任意文字，提交。数字人播报该段文字  
 
-- 快速体验  
-[在线镜像](https://www.compshare.cn/images/4458094e-a43d-45fe-9b57-de79253befe4?referral_code=3XW3852OBmnD089hMMrtuU&ytag=GPU_GitHub_livetalking) 用该镜像创建实例即可运行成功
-
-安装运行过程中如果访问不了huggingface，在运行前
+- 模型下载
+如果访问不了huggingface，在运行前
 ```
 export HF_ENDPOINT=https://hf-mirror.com
 ``` 
 
 
-## 3. More Usage
-使用说明: <https://livetalking-doc.readthedocs.io/>
-  
-## 4. Docker Run  
-不需要前面的安装，直接运行。
-```
-docker run --gpus all -it --network=host --rm registry.cn-beijing.aliyuncs.com/codewithgpu2/lipku-metahuman-stream:2K9qaMBu8v
-```
-代码在/root/metahuman-stream，先git pull拉一下最新代码，然后执行命令同第2、3步 
-
-提供如下镜像
-- autodl镜像: <https://www.codewithgpu.com/i/lipku/livetalking/base>   
-[autodl教程](https://livetalking-doc.readthedocs.io/zh-cn/latest/autodl/README.html)
-- ucloud镜像: <https://www.compshare.cn/images/4458094e-a43d-45fe-9b57-de79253befe4?referral_code=3XW3852OBmnD089hMMrtuU&ytag=GPU_GitHub_livetalking>  
-可以开放任意端口，不需要另外部署srs服务.  
-[ucloud教程](https://livetalking-doc.readthedocs.io/zh-cn/latest/ucloud/ucloud.html) 
-
-
-## 5. 性能
+## 性能
 - 性能主要跟cpu和gpu相关，每路视频压缩需要消耗cpu，cpu性能与视频分辨率正相关；每路口型推理跟gpu性能相关。  
 - 不说话时的并发数跟cpu相关，同时说话的并发数跟gpu相关。  
 - 后端日志inferfps表示显卡推理帧率，finalfps表示最终推流帧率。两者都要在25以上才能实时。如果inferfps在25以上，finalfps达不到25表示cpu性能不足。  
