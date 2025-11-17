@@ -31,7 +31,6 @@ root_dir = os.path.dirname(pwd_path)
 
 def load_avatar(avatar_id):
     """加载avatar数据"""
-    # avatar_path = f"./data/avatars/{avatar_id}"
     avatar_path = os.path.join(root_dir, 'data', avatar_id)
     full_imgs_path = f"{avatar_path}/full_imgs" 
     face_imgs_path = f"{avatar_path}/face_imgs" 

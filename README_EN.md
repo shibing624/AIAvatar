@@ -17,7 +17,9 @@
 
 
 **AIAvatar**: Real-time interactive streaming digital avatar with synchronized audio and video dialogue. Achieves commercial-grade quality.
-[Wav2Lip Demo](https://www.bilibili.com/video/BV1scwBeyELA/)
+
+
+![wav2lip](https://github.com/shibing624/AIAvatar/blob/main/docs/snap.png)
 
 ## Features
 - Supports Wav2Lip lip-sync model for digital avatars
@@ -27,10 +29,13 @@
 - Supports action choreography: plays custom videos when not speaking
 - Supports multi-concurrency, frontend-backend separation, GPU model service deployment, and CPU frontend service startup
 
+## Model
 
-## Demo
+![model](https://github.com/shibing624/AIAvatar/blob/main/docs/main.png)
+## Cases
+<video src=https://github.com/shibing624/AIAvatar/blob/main/docs/long_hair_girl_demo.mp4></video>
 
-Huggingface Demo: 
+<video src=https://github.com/shibing624/AIAvatar/blob/main/docs/demo.mp4></video>
 
 ## Install
 

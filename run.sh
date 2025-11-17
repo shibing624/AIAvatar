@@ -1,14 +1,14 @@
 #!/bin/bash
 
 # AI Avatar 启动脚本
-# 用法: ./run.sh [avatar_type] [port]
-# avatar_type: female(默认) | glass_man | long_hair_girl  
+# 用法: ./run.sh [avatar_id] [port]
+# avatar_id: wav2lip_avatar_female_model(默认) | wav2lip_avatar_glass_man | wav2lip_avatar_long_hair_girl
 # port: 端口号(默认8010)
 
 set -e
 
 # 默认参数
-AVATAR_TYPE=${1:-"female"}
+AVATAR_ID=${1:-"wav2lip_avatar_female_model"}
 PORT=${2:-8010}
 
 # 颜色输出
@@ -23,7 +23,7 @@ echo "╔═══════════════════════�
 echo "║           AI Avatar 数字人             ║"
 echo "║        实时交互流式数字人系统           ║"
 echo "║                                       ║"
-echo "║  🤖 支持多种数字人模型                 ║"
+echo "║  🤖 支持wav2lip数字人模型                 ║"
 echo "║  🎤 支持声音克隆                       ║"
 echo "║  💬 支持实时对话                       ║"
 echo "║  📹 支持WebRTC视频输出                 ║"
@@ -45,29 +45,8 @@ else
     echo -e "${YELLOW}⚠ 建议使用虚拟环境运行${NC}"
 fi
 
-# 映射形象参数
-case $AVATAR_TYPE in
-    "female")
-        AVATAR_ID="wav2lip_avatar_female_model"
-        AVATAR_DESC="女性数字人"
-        ;;
-    "glass_man")
-        AVATAR_ID="wav2lip_avatar_glass_man"
-        AVATAR_DESC="戴眼镜男性数字人"
-        ;;
-    "long_hair_girl")
-        AVATAR_ID="wav2lip_avatar_long_hair_girl"
-        AVATAR_DESC="长发女性数字人"
-        ;;
-    *)
-        echo -e "${RED}错误: 不支持的形象类型 '$AVATAR_TYPE'${NC}"
-        echo -e "${YELLOW}支持的类型: female, glass_man, long_hair_girl${NC}"
-        exit 1
-        ;;
-esac
-
 echo -e "${GREEN}启动配置:${NC}"
-echo -e "  数字人形象: ${AVATAR_DESC}"
+echo -e "  数字人形象: ${AVATAR_ID}"
 echo -e "  Web端口: ${PORT}"
 echo -e "  访问地址: http://127.0.0.1:${PORT}/index.html"
 echo ""

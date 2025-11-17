@@ -19,7 +19,8 @@
 **AIAvatar**: Real-time interactive streaming digital avatar with synchronized audio and video dialogue. Achieves commercial-grade quality.
 
 **AIAvatar** 实时交互流式数字人，实现音视频同步对话。基本可以达到商用效果。
-[wav2lip效果](https://www.bilibili.com/video/BV1scwBeyELA/)
+
+![wav2lip](https://github.com/shibing624/AIAvatar/blob/main/docs/snap.png)
 
 ## Features
 - 支持数字人唇形同步模型wav2lip
@@ -29,10 +30,13 @@
 - 支持动作编排：不说话时播放自定义视频
 - 支持多并发，支持前后端分离，gpu部署模型服务，cpu启动前端服务
 
+## Model
 
-## Demo
+![model](https://github.com/shibing624/AIAvatar/blob/main/docs/main.png)
+## Cases
+<video src=https://github.com/shibing624/AIAvatar/blob/main/docs/long_hair_girl_demo.mp4></video>
 
-Huggingface Demo: 
+<video src=https://github.com/shibing624/AIAvatar/blob/main/docs/demo.mp4></video>
 
 ## Install
 
@@ -81,10 +85,10 @@ export HF_ENDPOINT=https://hf-mirror.com
 ./run.sh
 
 # 使用戴眼镜男性形象
-./run.sh glass_man
+./run.sh wav2lip_avatar_glass_man
 
 # 使用长发女性形象，自定义端口
-./run.sh long_hair_girl 8010
+./run.sh wav2lip_avatar_long_hair_girl 8010
 ```
 
 #### 方式二：直接运行
