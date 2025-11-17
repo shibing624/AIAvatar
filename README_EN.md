@@ -146,6 +146,48 @@ python main.py --avatar_id wav2lip_avatar_female_model --gpu_server_url http://1
 - Total download size is approximately 850MB, please ensure stable network connection
 - Service will start automatically after download completes
 
+## Create Your Own Digital Avatar
+
+You can create custom digital avatar images using your own videos. This feature extracts face frames from videos for the avatar's idle actions.
+
+### Step 1: Prepare Video
+- **Video Requirements**:
+  - The person in the video should be **silent with mouth closed** (used for idle actions)
+  - Clear face should be visible in the video, front-facing recommended
+  - Common video formats supported (mp4, avi, mov, etc.)
+  - Recommended duration: 5-30 seconds, frame rate: 25-30fps
+
+### Step 2: Generate Digital Avatar
+```bash
+# Generate digital avatar, img_size must be 256 (related to model)
+python src/wav2lip/genavatar.py --video_path your_video.mp4 --img_size 256 --avatar_id wav2lip_avatar_custom
+
+# Parameters:
+# --video_path: Input video path
+# --img_size: Image size, must be 256 (related to wav2lip model)
+# --avatar_id: Generated avatar ID, custom name
+```
+
+### Step 3: Copy to Project Directory
+```bash
+# Copy generated avatar files to project's data directory
+cp -r results/avatars/wav2lip_avatar_custom data/
+```
+
+### Step 4: Use Custom Avatar
+```bash
+# Start service with custom avatar
+python main.py --avatar_id wav2lip_avatar_custom
+```
+
+**Notes:**
+- The `img_size` parameter must be set to `256`, which is required by the wav2lip model
+- Generated avatars will be saved in `results/avatars/{avatar_id}` directory
+- Directory structure includes:
+  - `full_imgs/`: Complete video frames
+  - `face_imgs/`: Cropped face images (256x256)
+  - `coords.pkl`: Face coordinate information
+- If faces cannot be detected in some frames, the program will report an error. Please ensure all frames in the video contain clear faces
 
 ## Performance
 - Performance is mainly related to CPU and GPU. Each video stream compression consumes CPU, and CPU performance is positively correlated with video resolution. Each lip-sync inference is related to GPU performance.

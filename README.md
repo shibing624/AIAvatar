@@ -137,8 +137,8 @@ python main.py --avatar_id wav2lip_avatar_female_model --gpu_server_url http://1
 - 支持多前端服务连接同一GPU服务
 - 便于横向扩展和负载均衡
 
-**访问方式：**
-- WebRTC前端: http://serverip:8010/index.html
+#### 访问方式
+- WebRTC前端: http://127.0.0.1:8010/index.html
 - 服务端需要开放端口 tcp:8010; udp:1-65536
 
 **首次运行说明：**
@@ -146,6 +146,48 @@ python main.py --avatar_id wav2lip_avatar_female_model --gpu_server_url http://1
 - 总下载大小约850MB，请确保网络稳定
 - 下载完成后会自动启动服务
 
+## 替换成自己的数字人
+
+您可以使用自己的视频创建自定义数字人形象。该功能会从视频中提取人脸帧，用于数字人的待机动作。
+
+### 步骤1：准备视频
+- **视频要求**：
+  - 视频中人物需要**闭嘴不说话**（用作闲时待机动作）
+  - 视频中需要清晰的人脸，建议正面拍摄
+  - 视频格式支持常见格式（mp4, avi, mov等）
+  - 建议视频时长5-30秒，帧率25-30fps
+
+### 步骤2：生成数字人形象
+```bash
+# 生成数字人形象，img_size固定为256（与模型相关）
+python src/wav2lip/genavatar.py --video_path your_video.mp4 --img_size 256 --avatar_id wav2lip_avatar_custom
+
+# 参数说明：
+# --video_path: 输入视频路径
+# --img_size: 图像尺寸，固定为256（与wav2lip模型相关）
+# --avatar_id: 生成的形象ID，自定义名称
+```
+
+### 步骤3：复制到项目目录
+```bash
+# 将生成的形象文件复制到项目的data目录
+cp -r results/avatars/wav2lip_avatar_custom data/
+```
+
+### 步骤4：使用自定义形象
+```bash
+# 使用自定义形象启动服务
+python main.py --avatar_id wav2lip_avatar_custom
+```
+
+**注意事项：**
+- `img_size` 参数必须设置为 `256`，这是 wav2lip 模型的要求
+- 生成的形象会保存在 `results/avatars/{avatar_id}` 目录下
+- 目录结构包含：
+  - `full_imgs/`: 完整视频帧
+  - `face_imgs/`: 裁剪后的人脸图像（256x256）
+  - `coords.pkl`: 人脸坐标信息
+- 如果视频中某些帧检测不到人脸，程序会报错，请确保视频中所有帧都包含清晰的人脸
 
 ## 性能
 - 性能主要跟cpu和gpu相关，每路视频压缩需要消耗cpu，cpu性能与视频分辨率正相关；每路口型推理跟gpu性能相关。  
