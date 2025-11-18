@@ -16,13 +16,17 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import torch
 
+pwd_path = os.path.abspath(os.path.dirname(__file__))
+project_root = os.path.dirname(pwd_path)
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
+
 from src.log import logger
 from src.get_file import http_get
 from src.config import get_model_download_config
 from src.wav2lip.models import Wav2Lip
 
-pwd_path = os.path.abspath(os.path.dirname(__file__))
-default_model_path = os.path.join(pwd_path, '../models/wav2lip.pth')
+default_model_path = os.path.join(project_root, 'models/wav2lip.pth')
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 logger.info(f'Using {device} for inference.')
@@ -302,7 +306,7 @@ def inference_batch():
         gpu_util_pct = (infer_time / total_time * 100) if total_time > 0 else 0
 
         logger.info(
-            f"Batch {actual_batch_size}f: prep={prep_time:.4f}s({prep_time / total_time * 100:.1f}%), transfer={transfer_time:.4f}s({transfer_time / total_time * 100:.1f}%), infer={infer_time:.4f}s({gpu_util_pct:.1f}%), post={post_time:.4f}s({post_time / total_time * 100:.1f}%), total={total_time:.4f}s, FPS={fps:.1f}")
+            f"Batch {actual_batch_size}: prep={prep_time:.4f}s({prep_time / total_time * 100:.1f}%), transfer={transfer_time:.4f}s({transfer_time / total_time * 100:.1f}%), infer={infer_time:.4f}s({gpu_util_pct:.1f}%), post={post_time:.4f}s({post_time / total_time * 100:.1f}%), total={total_time:.4f}s, FPS={fps:.1f}")
 
         return jsonify({
             'status': 'ok',
