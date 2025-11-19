@@ -1,10 +1,10 @@
 LLM:
-  LLM_API_KEY: "sk-8713fa90974545f5abf7464714d3b011"
+  LLM_API_KEY: "xxx"
   LLM_BASE_URL: "https://dashscope.aliyuncs.com/compatible-mode/v1"
 
 TTS:
   DOUBAO_APPID: "3753195493"
-  DOUBAO_TOKEN: "OcJsLE3uyaPib9cfyiPpHtNGMDm3-nYc"
+  DOUBAO_TOKEN: "xxx"
 
 DOWNLOAD:
   BASE_URL: "https://huggingface.co/shibing624/ai-avatar-wav2lip/resolve/main"
