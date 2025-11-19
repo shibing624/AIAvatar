@@ -3,7 +3,7 @@ LLM:
   LLM_BASE_URL: "https://dashscope.aliyuncs.com/compatible-mode/v1"
 
 TTS:
-  DOUBAO_APPID: "3753195493"
+  DOUBAO_APPID: "xxx"
   DOUBAO_TOKEN: "xxx"
 
 DOWNLOAD:
