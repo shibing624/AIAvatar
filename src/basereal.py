@@ -197,7 +197,7 @@ class BaseReal:
 
     def record_video_data(self, image):
         if self.width == 0:
-            print("image.shape:", image.shape)
+            # print("image.shape:", image.shape)
             self.height, self.width, _ = image.shape
         if self.recording:
             self._record_video_pipe.stdin.write(image.tostring())

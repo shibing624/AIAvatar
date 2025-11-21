@@ -46,7 +46,10 @@ function negotiate() {
 function start() {
     var config = {
         sdpSemantics: 'unified-plan',
-        iceServers: []
+        iceServers: [
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:stun1.l.google.com:19302' }
+        ]
     };
 
     pc = new RTCPeerConnection(config);

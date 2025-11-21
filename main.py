@@ -10,7 +10,7 @@ import torch.multiprocessing as mp
 from aiohttp import web
 import aiohttp
 import aiohttp_cors
-from aiortc import RTCPeerConnection, RTCSessionDescription, RTCConfiguration
+from aiortc import RTCPeerConnection, RTCSessionDescription, RTCConfiguration, RTCIceServer
 from aiortc.rtcrtpsender import RTCRtpSender
 
 import argparse
@@ -161,8 +161,17 @@ async def offer(request):
     
     nerfreal = LipReal(temp_opt, model, session_avatar)
     nerfreals[sessionid] = nerfreal
+    
+    # 配置 ICE 服务器（STUN/TURN）以支持 NAT 穿透
+    # 这对于远程服务器部署至关重要
+    ice_servers = [
+        RTCIceServer(urls=["stun:stun.l.google.com:19302"]),
+        RTCIceServer(urls=["stun:stun1.l.google.com:19302"]),
+        RTCIceServer(urls=["stun:stun2.l.google.com:19302"]),
+    ]
+    
     pc = RTCPeerConnection(configuration=RTCConfiguration(
-        iceServers=[],
+        iceServers=ice_servers,
     ))
     pcs.add(pc)
 
@@ -170,6 +179,7 @@ async def offer(request):
     async def on_connectionstatechange():
         logger.info(f"Session {sessionid}: Connection state is {pc.connectionState}")
         if pc.connectionState == "failed":
+            logger.error(f"Session {sessionid}: Connection failed! ICE state: {pc.iceConnectionState}, Gathering state: {pc.iceGatheringState}")
             await pc.close()
             pcs.discard(pc)
             # 安全删除：检查 sessionid 是否存在
@@ -186,7 +196,16 @@ async def offer(request):
                 del nerfreals[sessionid]
             else:
                 logger.warning(f"Session {sessionid}: Already removed from nerfreals")
-            # gc.collect()
+    
+    @pc.on("iceconnectionstatechange")
+    async def on_iceconnectionstatechange():
+        logger.info(f"Session {sessionid}: ICE connection state is {pc.iceConnectionState}")
+        if pc.iceConnectionState == "failed":
+            logger.error(f"Session {sessionid}: ICE connection failed! This usually means NAT traversal failed or firewall is blocking WebRTC.")
+    
+    @pc.on("icegatheringstatechange")
+    async def on_icegatheringstatechange():
+        logger.debug(f"Session {sessionid}: ICE gathering state is {pc.iceGatheringState}")
     
     @pc.on("datachannel")
     def on_datachannel(channel):
