@@ -178,17 +178,25 @@ def get_avatars_config() -> dict:
 
 def get_avatar_config(avatar_id: str) -> dict:
     """
-    根据avatar_id获取单个数字人配置
+    根据avatar_id获取单个数字人配置（支持通过 id 或 avatar_dir 查找）
     
     Args:
-        avatar_id: 数字人ID
+        avatar_id: 数字人ID（可以是 id 或 avatar_dir）
         
     Returns:
         数字人配置字典，如果未找到返回None
     """
     avatars_config = get_avatars_config()
+    
+    # 首先尝试通过 id 查找
     for avatar in avatars_config.get('avatars', []):
         if avatar.get('id') == avatar_id:
             return avatar
+    
+    # 如果没找到，尝试通过 avatar_dir 查找（向后兼容）
+    for avatar in avatars_config.get('avatars', []):
+        if avatar.get('avatar_dir') == avatar_id:
+            return avatar
+    
     return None
 

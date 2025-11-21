@@ -178,7 +178,7 @@ async def offer(request):
                 del nerfreals[sessionid]
             else:
                 logger.warning(f"Session {sessionid}: Already removed from nerfreals")
-        if pc.connectionState == "closed":
+        elif pc.connectionState == "closed":  # 使用 elif 避免重复执行
             pcs.discard(pc)
             # 安全删除：检查 sessionid 是否存在
             if sessionid in nerfreals:
