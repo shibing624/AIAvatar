@@ -280,7 +280,7 @@ class LipReal(BaseReal):
             self.asr.run_step()
 
             if video_track and video_track._queue.qsize() >= 5:
-                logger.debug(f'pausing production for queue control, queue size: {video_track._queue.qsize()}')
+                # logger.debug(f'pausing production for queue control, queue size: {video_track._queue.qsize()}')
                 time.sleep(0.04 * video_track._queue.qsize() * 0.8)
 
         logger.info('lipreal thread stop')
