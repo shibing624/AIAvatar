@@ -35,6 +35,7 @@ from av import AudioFrame, VideoFrame
 
 from src.ttsreal import TencentTTS, DoubaoTTS, DoubaoTTS3, AzureTTS
 from src.log import logger
+from src.audio_monitor import get_monitor
 
 
 def read_imgs(img_list):
@@ -94,6 +95,10 @@ class BaseReal:
         self.custom_index = {}
         self.custom_opt = {}
         self.__loadcustom()
+        
+        # 初始化音频监控 (可通过环境变量AUDIO_MONITOR=0关闭)
+        enable_monitor = os.getenv('AUDIO_MONITOR', '1') == '1'
+        self.audio_monitor = get_monitor(enable=enable_monitor)
 
     def put_msg_txt(self, msg, datainfo: dict = {}):
         self.tts.put_msg_txt(msg, datainfo)
@@ -325,6 +330,29 @@ class BaseReal:
                 new_frame = AudioFrame(format='s16', layout='mono', samples=frame.shape[0])
                 new_frame.planes[0].update(frame.tobytes())
                 new_frame.sample_rate = 16000
-                asyncio.run_coroutine_threadsafe(audio_track._queue.put((new_frame, eventpoint)), loop)
+                
+                # 记录音频帧生产
+                self.audio_monitor.record_frame_produced()
+                
+                # 优化音频队列放入逻辑,避免阻塞导致掉帧
+                # 如果队列满,尝试非阻塞放入,失败则记录警告但继续处理
+                try:
+                    # 使用put_nowait避免阻塞,如果队列满会抛出QueueFull异常
+                    future = asyncio.run_coroutine_threadsafe(
+                        audio_track._queue.put((new_frame, eventpoint)), 
+                        loop
+                    )
+                    # 设置较短的超时时间(50ms),避免长时间等待
+                    future.result(timeout=0.05)
+                except Exception as e:
+                    # 队列满或超时,记录警告但不影响后续帧处理
+                    self.audio_monitor.record_queue_full()
+                    if not hasattr(self, '_audio_queue_warning_count'):
+                        self._audio_queue_warning_count = 0
+                    self._audio_queue_warning_count += 1
+                    # 每100次只记录1次,避免日志刷屏
+                    if self._audio_queue_warning_count % 100 == 1:
+                        logger.warning(f'Audio queue full or timeout, dropped frames: {self._audio_queue_warning_count}')
+                
                 self.record_audio_data(frame)
         logger.info('basereal process_frames thread stop')

@@ -189,6 +189,8 @@ class TencentTTS(BaseTTS):
         text, textevent = msg
         first = True
         last_stream = np.array([], dtype=np.float32)
+        frame_count = 0
+        
         for chunk in audio_stream:
             if chunk is not None and len(chunk) > 0:
                 stream = np.frombuffer(chunk, dtype=np.int16).astype(np.float32) / 32767
@@ -201,13 +203,18 @@ class TencentTTS(BaseTTS):
                         eventpoint = {'status': 'start', 'text': text}
                         eventpoint.update(**textevent)
                         first = False
+                    
                     self.parent.put_audio_frame(stream[idx:idx + self.chunk], eventpoint)
                     streamlen -= self.chunk
                     idx += self.chunk
+                    frame_count += 1
                 last_stream = stream[idx:]  # get the remain stream
+        
+        # 发送结束事件(使用静音帧)
         eventpoint = {'status': 'end', 'text': text}
         eventpoint.update(**textevent)
         self.parent.put_audio_frame(np.zeros(self.chunk, np.float32), eventpoint)
+        logger.debug(f'TencentTTS stream completed: {frame_count} frames for text: {text[:20]}...')
 
     ###########################################################################################
 
@@ -312,6 +319,8 @@ class DoubaoTTS(BaseTTS):
         text, textevent = msg
         first = True
         last_stream = np.array([], dtype=np.float32)
+        frame_count = 0
+        
         async for chunk in audio_stream:
             if chunk is not None and len(chunk) > 0:
                 stream = np.frombuffer(chunk, dtype=np.int16).astype(np.float32) / 32767
@@ -324,13 +333,18 @@ class DoubaoTTS(BaseTTS):
                         eventpoint = {'status': 'start', 'text': text}
                         eventpoint.update(**textevent)
                         first = False
+                    
                     self.parent.put_audio_frame(stream[idx:idx + self.chunk], eventpoint)
                     streamlen -= self.chunk
                     idx += self.chunk
+                    frame_count += 1
                 last_stream = stream[idx:]  # get the remain stream
+        
+        # 发送结束事件(使用静音帧)
         eventpoint = {'status': 'end', 'text': text}
         eventpoint.update(**textevent)
         self.parent.put_audio_frame(np.zeros(self.chunk, np.float32), eventpoint)
+        logger.debug(f'DoubaoTTS stream completed: {frame_count} frames for text: {text[:20]}...')
 
 
 ###########################################################################################
@@ -426,7 +440,7 @@ class DoubaoTTS3(BaseTTS):
             protocol_logger = logging.getLogger('volcengine_bidirection_demo.protocols.protocols')
             protocol_logger.setLevel(logging.INFO)
         except ImportError as e:
-            logger.error(f"❌ 无法导入火山引擎双向协议库: {e}")
+            logger.error(f"无法导入火山引擎双向协议库: {e}")
             logger.error("请确保已安装 volcengine_bidirection_demo 协议库")
             raise ImportError("火山引擎双向协议库未找到，无法使用DoubaoTTS3") from e
         
@@ -504,144 +518,131 @@ class DoubaoTTS3(BaseTTS):
                         if msg.type == self.MsgType.FullServerResponse and msg.event == self.EventType.ConnectionStarted:
                             break
                     
-                    # 分割文本为句子
-                    sentences = [s.strip() for s in text.split('。') if s.strip()]
-                    if not sentences:
-                        sentences = [text]
+                    # 整句处理，不再分割
+                    session_id = str(uuid.uuid4())
                     
-                    # 处理每个句子
-                    for i, sentence in enumerate(sentences):
-                        logger.info(f"🎯 处理句子 {i+1}/{len(sentences)}: {sentence}")
-                        session_id = str(uuid.uuid4())
-                        
-                        # 构建基础请求
-                        base_request = {
-                            "user": {"uid": str(uuid.uuid4())},
-                            "namespace": "BidirectionalTTS",
-                            "req_params": {
-                                "speaker": self.voice_type,
-                                "audio_params": {
-                                    "format": "pcm",
-                                    "sample_rate": 24000,  # 使用24000Hz采样率
-                                    "enable_timestamp": True,
-                                },
-                                "additions": json.dumps({
-                                    "disable_markdown_filter": False,
-                                }),
+                    # 构建基础请求
+                    base_request = {
+                        "user": {"uid": str(uuid.uuid4())},
+                        "namespace": "BidirectionalTTS",
+                        "req_params": {
+                            "speaker": self.voice_type,
+                            "audio_params": {
+                                "format": "pcm",
+                                "sample_rate": 24000,  # 使用24000Hz采样率
+                                "enable_timestamp": True,
                             },
-                        }
-                        
-                        # 启动会话 - 使用协议库函数
-                        start_session_request = copy.deepcopy(base_request)
-                        start_session_request["event"] = self.EventType.StartSession
-                        await self.start_session(websocket, json.dumps(start_session_request).encode(), session_id)
-                        
-                        # 等待SessionStarted事件（手动处理，避免wait_for_event抛出异常）
-                        while True:
-                            msg = await self.receive_message(websocket)
-                            if msg.type == self.MsgType.FullServerResponse and msg.event == self.EventType.SessionStarted:
-                                break
-                        
-                        # 逐字符发送文本（异步后台任务）
-                        async def send_chars():
-                            logger.info(f"📤 发送字符: {len(sentence)} 个字符")
-                            for char in sentence:
-                                synthesis_request = copy.deepcopy(base_request)
-                                synthesis_request["event"] = self.EventType.TaskRequest
-                                synthesis_request["req_params"]["text"] = char
-                                await self.task_request(websocket, json.dumps(synthesis_request).encode(), session_id)
-                                
-                                # 根据字符类型调整延迟，参考 bidirection.py 但增加延迟以降低语速
-                                if char in '，。！？；：、':
-                                    # 标点符号需要更长延迟，让语音有停顿感
-                                    await asyncio.sleep(0.05)  # 50ms延迟
-                                elif char in '\n\t ':
-                                    # 空格和换行也需要延迟
-                                    await asyncio.sleep(0.03)  # 30ms延迟
-                                else:
-                                    # 普通字符延迟，比 bidirection.py 的 5ms 更长以降低语速
-                                    await asyncio.sleep(0.02)  # 20ms延迟
-                            await self.finish_session(websocket, session_id)
-                        # 开始后台发送字符
-                        send_task = asyncio.create_task(send_chars())
-                        
-                        # 接收音频数据 - 使用协议库函数
-                        while True:
-                            try:
-                                msg = await self.receive_message(websocket)
-                                
-                                if msg.type == self.MsgType.FullServerResponse:
-                                    if msg.event == self.EventType.SessionFinished:
-                                        # logger.info("✅ 会话完成")
-                                        break
-                                elif msg.type == self.MsgType.AudioOnlyServer:
-                                    if msg.payload and len(msg.payload) > 0:
-                                        if first:
-                                            end = time.perf_counter()
-                                            logger.info(f"DoubaoTTS3 Time to first chunk: {end - start}s")
-                                            first = False
-                                        chunk_count += 1
-                                        yield msg.payload
-                                elif msg.type == self.MsgType.Error:
-                                    # 处理错误消息
-                                    error_info = f"错误代码: {msg.error_code}"
-                                    if msg.payload:
-                                        try:
-                                            # 尝试解析错误payload（可能是gzip压缩的JSON）
-                                            payload_data = msg.payload
-                                            
-                                            # 检查是否是gzip压缩（gzip magic number: 1f 8b）
-                                            if len(payload_data) >= 2 and payload_data[:2] == b'\x1f\x8b':
-                                                try:
-                                                    decompressed = gzip.decompress(payload_data)
-                                                    error_data = json.loads(decompressed)
-                                                    error_info = f"错误代码: {msg.error_code}, 错误详情: {json.dumps(error_data, ensure_ascii=False)}"
-                                                    logger.error(f"❌ TTS错误: {error_info}")
-                                                except Exception as e:
-                                                    logger.error(f"❌ TTS错误 (gzip解压失败): {error_info}, payload解析失败: {e}")
-                                            else:
-                                                # 尝试直接解析为JSON
-                                                try:
-                                                    error_data = json.loads(payload_data)
-                                                    error_info = f"错误代码: {msg.error_code}, 错误详情: {json.dumps(error_data, ensure_ascii=False)}"
-                                                    logger.error(f"❌ TTS错误: {error_info}")
-                                                except:
-                                                    error_info = f"错误代码: {msg.error_code}, payload: {payload_data[:200].decode('utf-8', errors='ignore')}"
-                                                    logger.error(f"❌ TTS错误: {error_info}")
-                                        except Exception as e:
-                                            logger.error(f"❌ TTS错误解析失败: {error_info}, 异常: {e}")
-                                    else:
-                                        logger.error(f"❌ TTS错误: {error_info}")
-                                    
-                                    # 抛出异常，终止音频流
-                                    raise Exception(f"TTS服务返回错误: {error_info}")
-                                else:
-                                    logger.warning(f"⚠️ 未处理的消息类型: {msg.type}")
-                                            
-                            except Exception as e:
-                                logger.error(f"接收消息错误: {e}")
-                                break
-                        
-                        # 等待发送任务完成
-                        await send_task
+                            "additions": json.dumps({
+                                "disable_markdown_filter": False,
+                            }),
+                        },
+                    }
                     
-                    # 结束连接 - 使用协议库函数
-                    # logger.info("🔄 结束连接...")
+                    # 启动会话 - 使用协议库函数
+                    start_session_request = copy.deepcopy(base_request)
+                    start_session_request["event"] = self.EventType.StartSession
+                    await self.start_session(websocket, json.dumps(start_session_request).encode(), session_id)
+                    
+                    # 等待SessionStarted事件（手动处理，避免wait_for_event抛出异常）
+                    while True:
+                        msg = await self.receive_message(websocket)
+                        if msg.type == self.MsgType.FullServerResponse and msg.event == self.EventType.SessionStarted:
+                            break
+                    
+                    # 逐字符发送文本（异步后台任务）
+                    async def send_chars():
+                        logger.debug(f"DoubaoTTS3 发送句子: {len(text)} 个字符, top10: {text[:10]}...")
+                        for char in text:
+                            synthesis_request = copy.deepcopy(base_request)
+                            synthesis_request["event"] = self.EventType.TaskRequest
+                            synthesis_request["req_params"]["text"] = char
+                            await self.task_request(websocket, json.dumps(synthesis_request).encode(), session_id)
+                            
+                            # 根据字符类型调整延迟，参考 bidirection.py 但增加延迟以降低语速
+                            if char in '，。！？；：、':
+                                # 标点符号需要更长延迟，让语音有停顿感
+                                await asyncio.sleep(0.05)  # 50ms延迟
+                            elif char in '\n\t ':
+                                # 空格和换行也需要延迟
+                                await asyncio.sleep(0.03)  # 30ms延迟
+                            else:
+                                # 普通字符延迟，比 bidirection.py 的 5ms 更长以降低语速
+                                await asyncio.sleep(0.02)  # 20ms延迟
+                        await self.finish_session(websocket, session_id)
+                    
+                    # 开始后台发送字符
+                    send_task = asyncio.create_task(send_chars())
+                    
+                    # 接收音频数据 - 使用协议库函数
+                    while True:
+                        try:
+                            msg = await self.receive_message(websocket)
+                            
+                            if msg.type == self.MsgType.FullServerResponse:
+                                if msg.event == self.EventType.SessionFinished:
+                                    break
+                            elif msg.type == self.MsgType.AudioOnlyServer:
+                                if msg.payload and len(msg.payload) > 0:
+                                    if first:
+                                        end = time.perf_counter()
+                                        logger.debug(f"DoubaoTTS3 Time to first chunk: {end - start}s")
+                                        first = False
+                                    chunk_count += 1
+                                    yield msg.payload
+                            elif msg.type == self.MsgType.Error:
+                                # 处理错误消息
+                                error_info = f"错误代码: {msg.error_code}"
+                                if msg.payload:
+                                    try:
+                                        # 尝试解析错误payload（可能是gzip压缩的JSON）
+                                        payload_data = msg.payload
+                                        
+                                        # 检查是否是gzip压缩（gzip magic number: 1f 8b）
+                                        if len(payload_data) >= 2 and payload_data[:2] == b'\x1f\x8b':
+                                            try:
+                                                decompressed = gzip.decompress(payload_data)
+                                                error_data = json.loads(decompressed)
+                                                error_info = f"错误代码: {msg.error_code}, 错误详情: {json.dumps(error_data, ensure_ascii=False)}"
+                                                logger.error(f"TTS错误: {error_info}")
+                                            except Exception as e:
+                                                logger.error(f"TTS错误 (gzip解压失败): {error_info}, payload解析失败: {e}")
+                                        else:
+                                            # 尝试直接解析为JSON
+                                            try:
+                                                error_data = json.loads(payload_data)
+                                                error_info = f"错误代码: {msg.error_code}, 错误详情: {json.dumps(error_data, ensure_ascii=False)}"
+                                                logger.error(f"TTS错误: {error_info}")
+                                            except:
+                                                error_info = f"错误代码: {msg.error_code}, payload: {payload_data[:200].decode('utf-8', errors='ignore')}"
+                                                logger.error(f"TTS错误: {error_info}")
+                                    except Exception as e:
+                                        logger.error(f"TTS错误解析失败: {error_info}, 异常: {e}")
+                                else:
+                                    logger.error(f"TTS错误: {error_info}")
+                                
+                                # 抛出异常，终止音频流
+                                raise Exception(f"TTS服务返回错误: {error_info}")
+                            else:
+                                logger.warning(f"⚠️ 未处理的消息类型: {msg.type}")
+                                        
+                        except Exception as e:
+                            logger.error(f"接收消息错误: {e}")
+                            break
+                    
+                    # 等待发送任务完成
+                    await send_task
                     await self.finish_connection(websocket)
                     
                     # 等待ConnectionFinished事件（手动处理）
                     while True:
                         msg = await self.receive_message(websocket)
                         if msg.type == self.MsgType.FullServerResponse and msg.event == self.EventType.ConnectionFinished:
-                            # logger.info("✅ 连接已关闭")
                             break
-                    
-                    logger.info(f"📊 DoubaoTTS3流处理完成: {chunk_count} chunks")
             except websockets.exceptions.InvalidStatus as e:
                 # 处理 WebSocket 连接认证失败
                 status_code = e.response.status_code if hasattr(e, 'response') else None
                 if status_code == 401:
-                    logger.error("❌ DoubaoTTS3 认证失败 (401 Unauthorized)")
+                    logger.error("DoubaoTTS3 认证失败 (401 Unauthorized)")
                     logger.error(f"请检查 config.yml 中的 DOUBAO_APPID 和 DOUBAO_TOKEN 是否正确")
                     logger.error(f"当前 AppID: {self.appid[:10] if self.appid else 'None'}...")
                     logger.error(f"当前 Token: {self.token[:10] if self.token else 'None'}...")
@@ -651,7 +652,7 @@ class DoubaoTTS3(BaseTTS):
                     logger.error("3. 账户权限不足，未开通双向TTS 3.0服务")
                     raise ValueError("DoubaoTTS3 认证失败，请检查配置") from e
                 else:
-                    logger.error(f"❌ DoubaoTTS3 WebSocket连接失败: HTTP {status_code}")
+                    logger.error(f"DoubaoTTS3 WebSocket连接失败: HTTP {status_code}")
                     raise
         except Exception as e:
             logger.exception(f'DoubaoTTS3 error: {e}')
@@ -706,12 +707,8 @@ class DoubaoTTS3(BaseTTS):
                             eventpoint.update(**textevent)
                             first = False
                         
-                        # 获取当前帧并检查振幅
+                        # 获取当前帧并发送
                         current_frame = stream[idx:idx + self.chunk]
-                        frame_amplitude = np.max(np.abs(current_frame))
-                        # if frame_count < 3:
-                        #     logger.info(f'🔊 Putting audio frame: amplitude={frame_amplitude:.4f}')
-                        
                         self.parent.put_audio_frame(current_frame, eventpoint)
                         streamlen -= self.chunk
                         idx += self.chunk
@@ -727,7 +724,7 @@ class DoubaoTTS3(BaseTTS):
                 eventpoint = {'status': 'end', 'text': text}
                 eventpoint.update(**textevent)
                 self.parent.put_audio_frame(padded_frame, eventpoint)
-                logger.info(f"📤 发送剩余音频数据: {len(last_stream)} samples (填充到 {self.chunk} samples)，附带结束事件")
+                # logger.info(f"📤 发送剩余音频数据: {len(last_stream)} samples (填充到 {self.chunk} samples)，附带结束事件")
             else:
                 # 如果没有剩余数据，发送结束事件（使用一个很小的帧，但尽量不产生静音）
                 # 这里我们选择不发送额外的静音帧，结束事件会在其他地方处理

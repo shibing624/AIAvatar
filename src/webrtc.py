@@ -25,6 +25,7 @@ import fractions
 from aiortc import MediaStreamTrack
 
 from src.log import logger
+from src.audio_monitor import get_monitor
 
 AUDIO_PTIME = 0.020  # 20ms audio packetization
 VIDEO_CLOCK_RATE = 90000
@@ -43,9 +44,14 @@ class PlayerStreamTrack(MediaStreamTrack):
         super().__init__()  # don't forget this!
         self.kind = kind
         self._player = player
-        self._queue = asyncio.Queue(maxsize=100)
+        # 增加音频队列大小,避免TTS高速产生时队列满导致阻塞和掉帧
+        # 音频: 500帧 = 10秒缓冲 (20ms/帧)
+        # 视频: 100帧 = 4秒缓冲 (40ms/帧)
+        maxsize = 500 if kind == 'audio' else 100
+        self._queue = asyncio.Queue(maxsize=maxsize)
         self.timelist = []  # 记录最近包的时间戳
         self.current_frame_count = 0
+        self.dropped_frames = 0  # 统计丢帧数
         if self.kind == 'video':
             self.framecount = 0
             self.lasttime = time.perf_counter()
@@ -72,21 +78,34 @@ class PlayerStreamTrack(MediaStreamTrack):
                 self._timestamp = 0
                 self.timelist.append(self._start)
                 date_str = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(self._start))
-                logger.info(f'video start:{self._start}, date str:{date_str}')
+                logger.debug(f'video start:{self._start}, date str:{date_str}')
             return self._timestamp, VIDEO_TIME_BASE
         else:  # audio
             if hasattr(self, "_timestamp"):
                 self._timestamp += int(AUDIO_PTIME * SAMPLE_RATE)
                 self.current_frame_count += 1
                 wait = self._start + self.current_frame_count * AUDIO_PTIME - time.time()
-                if wait > 0:
+                
+                # 音频帧时间同步优化 - 更宽松的策略减少卡顿
+                if wait < -0.2:  # 延迟超过200ms (增加容忍度)
+                    self.dropped_frames += 1
+                    monitor = get_monitor(enable=False)  # 使用全局实例
+                    if monitor:
+                        monitor.record_delay_warning()
+                    # 每200帧报告一次,减少日志量
+                    if self.dropped_frames % 200 == 1:
+                        logger.warning(f'Audio frame delay: {wait*1000:.1f}ms, total_dropped: {self.dropped_frames}')
+                    # 重新校准时间基准,避免累积延迟
+                    self._start = time.time() - self.current_frame_count * AUDIO_PTIME
+                elif wait > 0:
                     await asyncio.sleep(wait)
+                # 负延迟在-200ms内不做处理,允许自然追赶
             else:
                 self._start = time.time()
                 self._timestamp = 0
                 self.timelist.append(self._start)
                 date_str = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(self._start))
-                logger.info(f'audio start:{self._start}, date str:{date_str}')
+                logger.debug(f'audio start:{self._start}, date str:{date_str}')
             return self._timestamp, AUDIO_TIME_BASE
 
     async def recv(self) -> Union[Frame, Packet]:
@@ -100,12 +119,19 @@ class PlayerStreamTrack(MediaStreamTrack):
         if frame is None:
             self.stop()
             raise Exception
+        
+        # 记录音频帧消费
+        if self.kind == 'audio':
+            monitor = get_monitor(enable=False)  # 使用全局实例,不重新创建
+            if monitor:
+                monitor.record_frame_consumed()
+        
         if self.kind == 'video':
             self.totaltime += (time.perf_counter() - self.lasttime)
             self.framecount += 1
             self.lasttime = time.perf_counter()
             if self.framecount == 1000:
-                logger.info(f"actual avg final fps:{self.framecount / self.totaltime:.4f}")
+                logger.debug(f"actual avg final fps:{self.framecount / self.totaltime:.4f}")
                 self.framecount = 0
                 self.totaltime = 0
         return frame
@@ -166,7 +192,7 @@ class HumanPlayer:
                         }
                         if self._data_channel.readyState == 'open':
                             self._data_channel.send(json.dumps(message))
-                            logger.info(f"Sent LLM message: {message['text']}")
+                            logger.debug(f"Sent LLM message: {message['text']}")
                 except Exception as e:
                     logger.error(f"Failed to send data channel message: {e}")
 
