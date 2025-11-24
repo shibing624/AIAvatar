@@ -33,14 +33,13 @@
 
 ![model](https://github.com/shibing624/AIAvatar/blob/main/docs/main.png)
 ## Cases
+<img width="800" alt="Image" src="https://github.com/user-attachments/assets/c1cb2580-9cda-4e49-95c6-df24b9751c8a" />
 
-<div align="center">
+<video src="https://github.com/user-attachments/assets/3107df18-3fb0-45f4-94b6-70fa0ba504c6" controls width="640">
 
 [![Demo Video](https://img.shields.io/badge/📺%20Watch%20Demo%20Video-Click%20to%20Bilibili-blue?style=for-the-badge)](https://www.bilibili.com/video/BV1XyCrB1Eng/?vd_source=3a205bb530206c2aff567b054da55a43)
 
-**Bilibili Video Link**: [https://www.bilibili.com/video/BV1XyCrB1Eng](https://www.bilibili.com/video/BV1XyCrB1Eng/?vd_source=3a205bb530206c2aff567b054da55a43)
 
-</div>
 ## Install
 
 ### Install dependency
