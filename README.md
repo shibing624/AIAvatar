@@ -192,7 +192,7 @@ python main.py --avatar_id wav2lip_avatar_custom
   - `coords.pkl`: 人脸坐标信息
 - 如果视频中某些帧检测不到人脸，程序会报错，请确保视频中所有帧都包含清晰的人脸
 
-## 性能
+## 唇形同步模型性能
 - 性能主要跟cpu和gpu相关，每路视频压缩需要消耗cpu，cpu性能与视频分辨率正相关；每路口型推理跟gpu性能相关。  
 - 不说话时的并发数跟cpu相关，同时说话的并发数跟gpu相关。  
 - 后端日志inferfps表示显卡推理帧率，finalfps表示最终推流帧率。两者都要在25以上才能实时。如果inferfps在25以上，finalfps达不到25表示cpu性能不足。  
@@ -204,6 +204,16 @@ wav2lip256 | 3060    | 60
 wav2lip256 | 3080Ti  | 120
 
 wav2lip256模型需要显卡3060以上即可。 
+
+## TTS
+- doubao
+
+`doubao`的TTS使用的是火山引擎的Doubao语音合成，需要申请开通服务即可使用，有免费体验额度（5000字符）。
+
+<image src="https://github.com/shibing624/AIAvatar/blob/main/docs/doubaotts.png" width="500" />
+
+- doubao3
+豆包语音合成模型2.0，有2w字符免费体验额度，并发限制10。
 
 
 ## Contact
