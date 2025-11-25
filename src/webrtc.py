@@ -184,15 +184,31 @@ class HumanPlayer:
             if isinstance(eventpoint, dict) and 'text' in eventpoint and self._data_channel:
                 try:
                     import json
+                    status = eventpoint.get('status')
+                    
                     # 发送LLM回答到前端（仅发送start状态的完整文本）
-                    if eventpoint.get('status') == 'start':
+                    if status == 'start':
                         message = {
                             'type': 'llm',
                             'text': eventpoint.get('text', '')
                         }
                         if self._data_channel.readyState == 'open':
                             self._data_channel.send(json.dumps(message))
-                            logger.debug(f"message: {message['text']}")
+                            logger.debug(f"Sent message: {message['text']}")
+                        
+                        # 同时发送 tts_start 事件
+                        tts_start_msg = {'type': 'tts_start'}
+                        if self._data_channel.readyState == 'open':
+                            self._data_channel.send(json.dumps(tts_start_msg))
+                            # logger.debug("Sent tts_start event")
+                    
+                    # 发送 tts_end 事件
+                    elif status == 'end':
+                        tts_end_msg = {'type': 'tts_end'}
+                        if self._data_channel.readyState == 'open':
+                            self._data_channel.send(json.dumps(tts_end_msg))
+                            # logger.debug("Sent tts_end event")
+                            
                 except Exception as e:
                     logger.error(f"Failed to send data channel message: {e}")
 

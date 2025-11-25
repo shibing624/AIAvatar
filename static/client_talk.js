@@ -17,6 +17,8 @@ class AvatarClient {
         this.isSpeaking = false;
         this.sessionid = 0;
         this.subtitleEnabled = true;  // 字幕开关状态
+        this.subtitleTimer = null;  // 字幕隐藏定时器
+        this.currentSubtitle = '';  // 当前显示的字幕文本
         
         // DOM 元素
         this.remoteVideo = document.getElementById('remoteVideo');
@@ -280,25 +282,45 @@ class AvatarClient {
             case 'llm':
                 // AI回复 - 显示在字幕和聊天窗口
                 console.log('LLM回答:', data.text);
+                // 累积字幕文本（因为LLM是流式返回，按句子分段）
+                this.currentSubtitle = data.text;
                 this.showSubtitle(data.text);
                 // 添加到聊天窗口
                 this.addChatMessage('assistant', data.text);
-                // 5秒后自动隐藏字幕
-                setTimeout(() => {
-                    this.hideSubtitle();
-                }, 5000);
+                
+                // 清除之前的定时器
+                if (this.subtitleTimer) {
+                    clearTimeout(this.subtitleTimer);
+                    this.subtitleTimer = null;
+                }
+                
+                // 注意：不在这里设置隐藏定时器，等待 tts_end 事件
                 break;
                 
             case 'tts_start':
                 // 开始说话
                 this.isSpeaking = true;
                 console.log('数字人开始说话');
+                
+                // 清除任何现有的隐藏定时器
+                if (this.subtitleTimer) {
+                    clearTimeout(this.subtitleTimer);
+                    this.subtitleTimer = null;
+                }
                 break;
                 
             case 'tts_end':
                 // 结束说话
                 this.isSpeaking = false;
                 console.log('数字人结束说话');
+                
+                // 数字人说完话后，延迟3秒再隐藏字幕
+                if (this.subtitleTimer) {
+                    clearTimeout(this.subtitleTimer);
+                }
+                this.subtitleTimer = setTimeout(() => {
+                    this.hideSubtitle();
+                }, 3000);
                 break;
                 
             case 'error':
@@ -586,9 +608,16 @@ class AvatarClient {
     }
 
     hideSubtitle() {
+        // 清除定时器
+        if (this.subtitleTimer) {
+            clearTimeout(this.subtitleTimer);
+            this.subtitleTimer = null;
+        }
+        
+        // 延迟隐藏，确保过渡动画
         setTimeout(() => {
             this.subtitleOverlay.classList.remove('show');
-        }, 2000);
+        }, 100);
     }
 
     // 切换字幕显示状态

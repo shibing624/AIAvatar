@@ -628,8 +628,8 @@
     <!-- 底部控制栏 -->
     <div class="bottom-controls" id="bottomControls">
         <!-- Calling状态：只显示End Call -->
-        <button class="control-btn btn-subtitle hidden" id="subtitleBtn" title="字幕">
-            <i class="bi bi-badge-cc"></i>
+        <button class="control-btn btn-subtitle active hidden" id="subtitleBtn" title="字幕">
+            <i class="bi bi-badge-cc-fill"></i>
         </button>
         <button class="control-btn btn-mic hidden" id="micBtn" title="麦克风">
             <i class="bi bi-mic"></i>
@@ -732,6 +732,14 @@
             if (window.avatarClient) {
                 window.avatarClient.toggleSubtitle();
                 this.classList.toggle('active');
+                
+                // 切换图标
+                const icon = this.querySelector('i');
+                if (this.classList.contains('active')) {
+                    icon.className = 'bi bi-badge-cc-fill';
+                } else {
+                    icon.className = 'bi bi-badge-cc';
+                }
             }
         });
 
