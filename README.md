@@ -213,6 +213,7 @@ wav2lip256模型需要显卡3060以上即可。
 <image src="https://github.com/shibing624/AIAvatar/blob/main/docs/doubaotts.png" width="500" />
 
 - doubao3
+
 豆包语音合成模型2.0，有2w字符免费体验额度，并发限制10。
 
 
